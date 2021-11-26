@@ -1,3 +1,11 @@
+(*
+user declarations 
+%%
+parser declarations
+%%
+grammar rules
+*)
+
 %%
 %term
     EOF 
@@ -10,8 +18,15 @@
   | ARRAY | IF | THEN | ELSE | WHILE | FOR | TO | DO | LET | IN | END | OF 
   | BREAK | NIL
   | FUNCTION | VAR | TYPE 
+  | UMINUS 
 
-%nonterm  exp | program
+%nonterm  
+  exp 
+  | optionalexp | empty 
+  | program
+  | fundec | vardec | tydec 
+  | ty | dec | decs | tyfields
+  | lvalue | lvalue_not_id
 
 %pos int
 %verbose
@@ -26,6 +41,16 @@
 
 %prefer THEN ELSE LPAREN
 
+%right SEMICOLON
+%left THEN
+%left DO OF ELSE
+%left ASSIGN
+%left AND OR
+%nonassoc EQ NEQ GT GE LT LE
+%left PLUS MINUS
+%left TIMES DIVIDE
+%left UMINUS
+
 %value ID ("bogus")
 %value INT (1)
 %value STRING ("")
@@ -33,6 +58,65 @@
 %%
 
 program	: exp				()
-
 	
-exp: 			()
+exp: ID	()
+  | MINUS exp %prec UMINUS ()
+  | INT  ()
+  | STRING ()
+  | LPAREN RPAREN () 
+  | exp PLUS exp ()
+  | exp MINUS exp ()
+  | exp TIMES exp ()
+  | exp DIVIDE exp ()
+  | exp EQ exp ()
+  | exp NEQ exp ()
+  | exp LT exp ()
+  | exp LE exp ()
+  | exp GT exp ()
+  | exp GE exp ()
+  | exp AND exp ()
+  | exp OR exp ()
+  | ID LBRACK exp RBRACK OF exp ()
+  | lvalue ()
+  | lvalue ASSIGN exp ()
+  | IF exp THEN exp ELSE exp ()
+  | IF exp THEN exp ()
+  | WHILE exp DO exp ()
+  | FOR ID ASSIGN exp TO exp DO exp ()
+  | LET decs IN optionalexp END ()
+  | BREAK ()
+  | LPAREN exp RPAREN ()
+  | NIL ()
+  | exp SEMICOLON exp ()
+
+
+decs: dec ()
+  | decs dec ()
+
+dec: tydec ()
+  | vardec ()
+  | fundec ()
+
+tydec: TYPE ID EQ ty ()
+
+ty: LBRACE tyfields RBRACE ()
+  | ARRAY OF ID ()
+
+tyfields: ID COLON ID  ()
+  | empty ()
+
+vardec: VAR ID ASSIGN exp  ()
+  | VAR ID COLON ID ASSIGN exp () 
+
+
+fundec: FUNCTION ID LPAREN tyfields RPAREN EQ exp ()
+  | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp ()
+
+optionalexp: exp ()
+  | empty ()
+
+lvalue: ID ()
+  | lvalue_not_id ()
+
+lvalue_not_id: lvalue DOT ID ()
+  | lvalue LBRACK exp RBRACK ()
