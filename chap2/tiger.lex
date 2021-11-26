@@ -3,15 +3,23 @@ type lexresult = Tokens.token
 
 val lineNum = ErrorMsg.lineNum
 val linePos = ErrorMsg.linePos
-fun err(p1,p2) = ErrorMsg.error p1
 
-val stringStart = ref 0 (* a reference to the start of a string *)
-val currentString = ref "" (* a reference to the current string *)
-val appendString s = currentString := !currentString ^ s (* derefence the string, append s to it *)
+val stringStart = ref 0
+val currentString = ref ""
+fun appendString s = currentString := !currentString ^ s (* string append *)
 
-val commentRef = ref 0 (* reference for open and close comments *)
+val commentRef = ref 0 (* for eof parsing - errors if not 0 at end of file *)
 
-fun eof() = let val pos = hd(!linePos) in Tokens.EOF(pos,pos) end
+fun nextLine pos = (lineNum := !lineNum + 1; linePos := pos :: !linePos)
+fun err p1 = ErrorMsg.error p1
+
+fun eof () = let
+    val pos = hd(!linePos)
+    val commentError = "Unclosed Comment Detected."
+in (if !commentRef <> 0
+    then err pos commentError else ();
+    Tokens.EOF(pos, pos))
+end
 
 %%
 %s COMMENT STRING STRING_ESCAPE STRING_LONG_ESCAPE STRING_CONTROL;
@@ -33,6 +41,7 @@ alphas = {alpha}+;
 <INITIAL>"{" => (Tokens.RBRACE(yypos, yypos+1));
 <INITIAL>"}" => (Tokens.LBRACE(yypos, yypos+1));
 <INITIAL>"[" => (Tokens.LBRACK(yypos, yypos+1));
+<INITIAL>"]" => (Tokens.RBRACK(yypos, yypos+1));
 
 <INITIAL>"+" => (Tokens.PLUS(yypos, yypos+1));
 <INITIAL>"-" => (Tokens.MINUS(yypos, yypos+1));
@@ -64,7 +73,7 @@ alphas = {alpha}+;
 <INITIAL>else => (Tokens.ELSE(yypos, yypos+4));
 <INITIAL>do => (Tokens.DO(yypos, yypos+2));
 <INITIAL>of => (Tokens.OF(yypos, yypos+2));
-<INITIAL>nil => (Tokens.NIL(yypos, yypos+3))
+<INITIAL>nil => (Tokens.NIL(yypos, yypos+3));
 
 <INITIAL>var => (Tokens.VAR(yypos,yypos+3));
 
